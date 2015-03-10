@@ -3267,19 +3267,31 @@ def trapz(y, x=None, dx=1.0, axis=-1):
     array([ 2.,  8.])
 
     """
-    y = asanyarray(y)
+    y = np.asanyarray(y)
     if x is None:
         d = dx
     else:
-        x = asanyarray(x)
+        x = np.asanyarray(x)
         if x.ndim == 1:
-            d = diff(x)
+            o = np.sign(x[-1] - x[0])
+            if np.any(x[1:] - x[:-1] != o):
+                raise ValueError('Array `x` must be monotonic.')
             # reshape to correct shape
             shape = [1]*y.ndim
             shape[axis] = d.shape[0]
+            d = np.abs(np.diff(x))
             d = d.reshape(shape)
         else:
-            d = diff(x, axis=axis)
+            slice1 = [slice(None)] * nd
+            slice2 = [slice(None)] * nd
+            slice1[axis] = slice(None, 1)
+            slice2[axis] = slice(-1, None)
+            o = np.sign(x[slice2] - x[slice1])
+            slice1[axis] = slice(None, -1)
+            slice2[axis] = slice(1, None)
+            if np.any(x[slice2] - x[slice1] != o):
+                raise ValueError('Array `x` must be monotonic along `axis`.')
+            d = np.abs(np.diff(x, axis=axis))
     nd = len(y.shape)
     slice1 = [slice(None)]*nd
     slice2 = [slice(None)]*nd
@@ -3293,7 +3305,6 @@ def trapz(y, x=None, dx=1.0, axis=-1):
         y = np.asarray(y)
         ret = add.reduce(d * (y[slice1]+y[slice2])/2.0, axis)
     return ret
-
 
 #always succeed
 def add_newdoc(place, obj, doc):
